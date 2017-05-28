@@ -1,0 +1,214 @@
+﻿<div id="create">
+    <h5>Добавление задания:</h5>
+    <input type="text" id="addName"/>
+    <input type="button" id="addTask" value="Добавить"/>
+</div>
+    
+<div id="change">
+    <h5>Редактирование задания:</h5>
+    <input type="hidden" id="editId" />
+    <input type="text" id="editName"/>
+    <input type="button" id="editTask" value="Изменить"/>
+</div>
+
+<div id="view"></div> 
+
+@section scripts
+{
+    <script type="text/javascript">
+        $(document).ready(function () {  /*событие будет выполнено когда DOM готов*/
+
+            GetAllTasks();
+
+            $("#editTask").click(function (event) { /*вешаем события на нажатия кнопок сохоанить задание и редактировать задание*/
+                event.preventDefault();
+                EditTask();
+            });
+
+            $("#addTask").click(function (event) {
+                event.preventDefault();
+                AddTask();
+            });
+        });
+
+        function GetAllTasks() {                        /*функция получения всех задний*/
+
+            /*
+            $("#createBlock").css('display', 'block');
+            $("#editBlock").css('display', 'none');
+            */
+            $.ajax({                                    /*формирование запроса*/
+                url: '/api/values',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    WriteResponse(data);               
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        function GetTask(id) {                        /*функция редактирования задания по ID*/
+            $.ajax({                                  /*формирование запроса*/
+                url: '/api/values/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    ShowTask(data);                   
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        function EditTask() {
+            var id = $('#editId').val()
+            // получаем новые значения для редактируемой книги
+            var task = {
+                Id: $('#editId').val(),
+                Task1: $('#editName').val(),
+            };
+            $.ajax({
+                url: '/api/values/' + id,
+                type: 'PUT',
+                data: JSON.stringify(task),
+                contentType: "application/json;charset=utf-8",
+                success: function (data) {
+                    GetAllTasks();
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        // Удаление книги
+        function DeleteTask(id) {
+
+            $.ajax({
+                url: '/api/values/' + id,
+                type: 'DELETE',
+                contentType: "application/json;charset=utf-8",
+                success: function (data) {
+                    GetAllTasks();
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        function ChangeStateTask(id) {
+
+            $.ajax({                                  /*формирование запроса*/
+                url: '/api/values/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    Helper(data);
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        function Helper(t)    
+        {
+
+            var task = {
+                Id: t.Id,
+                Task1: t.Task1,
+                State: true,
+            };
+
+
+            $.ajax({
+                url: '/api/values/' + t.Id,
+                type: 'PUT',
+                data: JSON.stringify(task),
+                contentType: "application/json;charset=utf-8",
+                success: function (data) {
+                    GetAllTasks();
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+            
+        
+
+        // Добавление новой книги
+        function AddTask() {
+            // получаем значения для добавляемой книги
+            var task = {
+                Task1: $('#addName').val(),
+            };
+
+            $.ajax({
+                url: '/api/values/',
+                type: 'POST',
+                data: JSON.stringify(task),
+                contentType: "application/json;charset=utf-8",
+                success: function (data) {
+                    GetAllTasks();
+                },
+                error: function (x, y, z) {
+                    alert(x + '\n' + y + '\n' + z);
+                }
+            });
+        }
+
+        function WriteResponse(tasks) {                /*вывод всех элементов из базы данных*/
+            var strResult = "<table><th>ID</th><th>Название</th><th>Cостояние</th>";
+            $.each(tasks, function (index, task) {
+                strResult += "<tr><td>" + task.Id + "</td><td> " + task.Task1 + "</td><td>" +
+                    task.State + "<input type = 'checkbox' onclick='StateItem(this)' data-item = '" + task.Id +"'/>" + "</td><td><a id='editItem' data-item='" + task.Id + "' onclick='EditItem(this);' >Изменить</a></td>" +
+                    "<td><a id='delItem' data-item='" + task.Id + "' onclick='DeleteItem(this);'>Удалить</a></td></tr>";
+            });
+            strResult += "</table>";
+            $("#view").html(strResult);
+        }
+
+        // обработчик удаления
+        function DeleteItem(el) {
+            // получаем id удаляемого объекта
+            var id = $(el).attr('data-item');
+            DeleteTask(id);
+        }
+        // обработчик редактирования
+        function EditItem(el) {
+            // получаем id редактируемого объекта
+            var id = $(el).attr('data-item');
+            GetTask(id);
+        }
+
+        // обработчик изменения состояния
+        function StateItem(el) {
+            // получаем id редактируемого объекта
+            var id = $(el).attr('data-item');
+            ChangeStateTask(id);
+        }
+
+
+        // вывод данных редактируемой книги в поля для редактирования
+        function ShowTask(task) {
+            if (task != null) {
+                /*
+                $("#createBlock").css('display', 'none');
+                $("#editBlock").css('display', 'block');
+                */
+                $("#editId").val(task.Id);
+                $("#editName").val(task.Task1);
+            }
+            else {
+                alert("Такая книга не существует");
+            }
+        }
+
+    </script>
+}
